@@ -2,13 +2,46 @@
 <html lang="en">
 <head>
   <%- include('./partials/head') %>
-  <title>Add blog</title>
 </head>
 <body>
   <%- include('./partials/navbar') %>
 
   <div class="container mt-4">
-    <h1>Blog</h1>
+    <h1 class="mb-4">Add a New Blog</h1>
+    <form action="/blog" method="post">
+      <div class="mb-3">
+        <label for="CoverImage" class="form-label">CoverImage</label>
+        <input
+          type="file"
+          class="form-control"
+          id="CoverImage"
+          name="CoverImage"
+          aria-describedby="CoverImage"
+        />
+      </div>
+      <div class="mb-3">
+        <label for="title" class="form-label">Blog Title</label>
+        <input
+          type="text"
+          class="form-control"
+          id="title"
+          name="title"
+          placeholder="Enter blog title"
+          required
+        />
+      </div>
+      <div class="mb-3">
+        <label for="content" class="form-label">Content</label>
+        <textarea 
+          class="form-control" 
+          id="content" 
+          name="content" 
+          rows="5" 
+          placeholder="Write your blog content here..."
+          required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Blog</button>
+    </form>
   </div>
 
   <%- include('./partials/script') %>
