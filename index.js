@@ -8,6 +8,7 @@ const PORT = 8000;
 
 
 const userRoute = require("./routes/user");
+const blogroute = require("./routes/blog");
 
 
 const mongoose = require("mongoose");
@@ -28,6 +29,9 @@ app.set("views",path.resolve("./views"));
 
 
 app.use("/user",userRoute);
+
+app.use("/blog",blogroute);
+
 
 
 app.get("/",(req,res)=>{
