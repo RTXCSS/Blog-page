@@ -4,9 +4,10 @@ const secret = "fu^^init96";
 
 function createToken(user){
     const payload={
-        _id : user.id,
+        _id : user._id,
         email : user.email,
-        profileImageURL : user.pfp,
+        fullName :user.fullName,
+        pfp : user.pfp,
         role : user.role,
     }
     const token = JWT.sign(payload,secret);

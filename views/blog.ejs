@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('./partials/head') %>
+  <title><%= blog.title %> - Blog Page</title>
+</head>
+<body>
+  <%- include('./partials/navbar') %>
+
+  <div class="container mt-4">
+    
+    <!-- Blog Title -->
+    <h1 class="mb-4"><%= blog.title %></h1>
+
+    <!-- Author Info -->
+    <div class="d-flex align-items-center mb-3">
+    <img src="<%= (blog.createdBy && blog.createdBy.pfp) ? blog.createdBy.pfp : '/images/pfp.png' %>"
+     alt="<%= blog.createdBy ? blog.createdBy.fullName : 'Author' %>"
+     class="rounded-circle me-2" width="50" height="50">
+
+      <div>
+        <strong><%= blog.createdBy?.fullName || 'Unknown Author' %></strong><br>
+        <small class="text-muted">
+          Posted on <%= blog.createdAt ? blog.createdAt.toDateString() : '' %>
+        </small>
+      </div>
+    </div>
+
+    <!-- Blog Content Card -->
+    <div class="card shadow-sm mb-4">
+      <% if (blog.coverimage) { %>
+        <img src="<%= blog.coverimage %>" class="card-img-top img-fluid" alt="<%= blog.title %>">
+      <% } %>
+      <div class="card-body">
+        <div class="card-text" style="white-space: pre-wrap; font-size: 1.1rem;">
+          <%= blog.body %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comment Section -->
+     <% if (locals.user) { %>
+          <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Leave a Comment</h5>
+        <form action="/blog/comment/<%= blog._id %>" method="post">
+          <div class="mb-3">
+            <textarea name="content" class="form-control" id="comment"
+                      placeholder="Write your comment here..." rows="3" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Post Comment</button>
+        </form>
+      </div>
+    </div>
+     <% } %> 
+
+    <!-- Back to Home -->
+    <a href="/" class="btn btn-secondary">← Back to Home</a>
+    <!--for comment -->
+    <% if (comments && comments.length > 0) { %>
+  <% comments.forEach(comment => { %>
+    <div class="comment mb-3 border-bottom pb-2">
+    <img src="<%= (comment.createdBy && comment.createdBy.pfp) ? comment.createdBy.pfp : '/images/pfp.png' %>" 
+     class="rounded-circle me-2" width="40" height="40" alt="Author Picture">
+      <strong><%= comment.createdBy?.fullName || 'Unknown' %></strong>
+      <pre><%= comment.content %></pre>
+      <small class="text-muted"><%= comment.createdAt.toDateString() %></small>
+    </div>
+    <% }) %>
+    <% } else { %>
+    <p>No comments yet.</p>
+    <% } %>
+    </div>
+
+
+  <%- include('./partials/script') %>
+</body>
+</html>

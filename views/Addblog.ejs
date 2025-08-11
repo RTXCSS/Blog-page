@@ -5,10 +5,9 @@
 </head>
 <body>
   <%- include('./partials/navbar') %>
-
   <div class="container mt-4">
     <h1 class="mb-4">Add a New Blog</h1>
-    <form action="/blog" method="post">
+    <form action="/blog" method="post" enctype="multipart/form-data">
       <div class="mb-3">
         <label for="CoverImage" class="form-label">CoverImage</label>
         <input
@@ -31,11 +30,11 @@
         />
       </div>
       <div class="mb-3">
-        <label for="content" class="form-label">Content</label>
+        <label for="body" class="form-label">Body</label>
         <textarea 
           class="form-control" 
-          id="content" 
-          name="content" 
+          id="body" 
+          name="body" 
           rows="5" 
           placeholder="Write your blog content here..."
           required></textarea>
