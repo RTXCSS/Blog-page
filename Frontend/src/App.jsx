@@ -1,11 +1,12 @@
-import React,{useState} from "react";
+import ChatBox from "./components/ChatBox";
 
-
-function App(){
-    return(<div>
-        <h1>Hello from React!!!</h1>
-    </div>)
+function App() {
+  return (
+    <div style={{ padding: "20px" }}>
+      <h1>Blog Chat</h1>
+      <ChatBox />
+    </div>
+  );
 }
 
 export default App;
-
