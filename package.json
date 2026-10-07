@@ -1,22 +1,40 @@
 {
-  "name": "blog",
-  "version": "1.0.0",
+  "name": "second-brain",
+  "version": "2.0.0",
+  "private": true,
+  "description": "A private MERN knowledge workspace with Socket.IO and grounded RAG",
   "main": "app.js",
   "scripts": {
-    "start": "node app",
-    "dev": "nodemon app"
+    "start": "node app.js",
+    "dev": "concurrently -k -n api,web \"node --watch app.js\" \"npm run dev --prefix Frontend\"",
+    "build": "npm run build --prefix Frontend",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:ui": "playwright test",
+    "setup": "npm install && npm install --prefix Frontend",
+    "dev:local": "concurrently -k -n api,web \"node scripts/local.cjs\" \"npm run dev --prefix Frontend\"",
+    "env:setup": "node scripts/setup-env.cjs"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie": "^1.0.2",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
     "multer": "^2.0.2",
-    "nodemon": "^3.1.10"
+    "socket.io": "^4.8.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "concurrently": "^9.2.1",
+    "mongodb-memory-server": "^10.2.1",
+    "prettier": "^3.9.9",
+    "socket.io-client": "^4.8.1",
+    "supertest": "^7.1.4"
   }
 }

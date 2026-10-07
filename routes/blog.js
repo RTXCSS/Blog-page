@@ -1,81 +1,124 @@
-const { Router } = require("express");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const mongoose = require("mongoose");
-const { Blog } = require("../models/blog");
-const { Comment } = require("../models/comments");
+const { Router } = require('express');
+const { z } = require('zod');
+const { Blog } = require('../models/blog');
+const { Comment } = require('../models/comments');
+const { Document } = require('../models/workspace');
+const { indexDocument } = require('../services/documents');
+const { presentBlog, publishedPost } = require('../services/blogs');
 const router = Router();
-
-// Multer storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.resolve(`./images/uploads/${req.user._id}`);
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const filename = `${Date.now()}-${file.originalname}`;
-    cb(null, filename);
-  }
+const objectId = /^[a-f\d]{24}$/i;
+const fields = z.object({
+  title: z.string().trim().min(1).max(160),
+  body: z.string().trim().min(1).max(100000),
+  summary: z.string().trim().max(280).default(''),
+  tags: z.array(z.string().trim().min(1).max(30)).max(5).default([]),
+  status: z.enum(['draft', 'published']).optional(),
+  coverTheme: z.enum(['sage', 'peach', 'lavender', 'ink']).default('sage'),
+  version: z.number().int().nonnegative().optional(),
 });
-const upload = multer({ storage: storage });
-
-// Add new blog form
-router.get('/add-new', (req, res) => {
-  return res.render("Addblog", { user: req.user });
+router.param('id', (req, res, next, id) =>
+  objectId.test(id) ? next() : res.status(404).json({ error: 'Story not found.' }),
+);
+router.get('/', async (req, res) => {
+  const posts = await Blog.find({ createdBy: req.user._id })
+    .populate('createdBy', 'fullName')
+    .sort({ updatedAt: -1 });
+  res.json(posts.map((p) => presentBlog(p)));
 });
-
-// Post a new comment
-router.post("/comment/:blogid", async (req, res) => {
-  if (!req.user || !req.user._id) {
-    return res.status(401).send("You must be signed in to comment");
+router.get('/:id', async (req, res) => {
+  const post = await Blog.findOne({ _id: req.params.id, createdBy: req.user._id }).populate(
+    'createdBy',
+    'fullName',
+  );
+  if (!post) return res.status(404).json({ error: 'Story not found.' });
+  res.json(presentBlog(post));
+});
+router.post('/', async (req, res) => {
+  const parsed = fields.safeParse(req.body);
+  if (!parsed.success)
+    return res
+      .status(400)
+      .json({
+        error: 'Add a title and body. Use up to 5 tags and a summary under 280 characters.',
+      });
+  const { version, ...data } = parsed.data;
+  const post = await Blog.create({
+    ...data,
+    createdBy: req.user._id,
+    ...(data.status === 'published' ? { publishedAt: new Date() } : {}),
+  });
+  await post.populate('createdBy', 'fullName');
+  res.status(201).json(presentBlog(post));
+});
+router.put('/:id', async (req, res) => {
+  const parsed = fields.safeParse(req.body);
+  if (!parsed.success)
+    return res.status(400).json({ error: 'Check your title, body, summary and tags.' });
+  const post = await Blog.findOne({ _id: req.params.id, createdBy: req.user._id });
+  if (!post) return res.status(404).json({ error: 'Story not found.' });
+  const { version, ...data } = parsed.data;
+  if (version !== undefined && version !== post.__v)
+    return res
+      .status(409)
+      .json({
+        error:
+          'This story changed in another tab. Copy your edits, then reload to get the latest version.',
+      });
+  Object.assign(post, data);
+  if (post.status === 'published' && !post.publishedAt) post.publishedAt = new Date();
+  try {
+    await post.save();
+  } catch (error) {
+    if (error.name !== 'VersionError') throw error;
+    return res
+      .status(409)
+      .json({ error: 'Another edit was saved first. Copy your changes before reloading.' });
   }
-  await Comment.create({
-    content: req.body.content,
-    blogID: req.params.blogid,
+  await post.populate('createdBy', 'fullName');
+  res.json(presentBlog(post));
+});
+router.delete('/:id', async (req, res) => {
+  const post = await Blog.findOneAndDelete({ _id: req.params.id, createdBy: req.user._id });
+  if (!post) return res.status(404).json({ error: 'Story not found.' });
+  await Comment.deleteMany({ blogID: req.params.id });
+  res.json({ ok: true });
+});
+router.post('/:id/import', async (req, res) => {
+  const blog = await Blog.findOne({ _id: req.params.id, createdBy: req.user._id });
+  if (!blog) return res.status(404).json({ error: 'Story not found.' });
+  const doc = await Document.create({
+    title: blog.title,
+    content: blog.body,
+    kind: 'note',
+    tags: [...new Set(['blog', ...blog.tags])],
+    owner: req.user._id,
+  });
+  await indexDocument(doc, req.app.get('io'));
+  res.status(201).json(doc);
+});
+router.post('/:id/comments', async (req, res) => {
+  const parsed = z.object({ content: z.string().trim().min(1).max(2000) }).safeParse(req.body);
+  if (!parsed.success)
+    return res.status(400).json({ error: 'Write a comment of 1–2,000 characters.' });
+  if (!(await publishedPost(req.params.id)))
+    return res.status(404).json({ error: 'Story not found.' });
+  const comment = await Comment.create({
+    content: parsed.data.content,
+    blogID: req.params.id,
     createdBy: req.user._id,
   });
-  return res.redirect(`/blog/${req.params.blogid}`);
+  await comment.populate('createdBy', 'fullName');
+  res.status(201).json(comment);
 });
-// Create a new blog
-router.post("/", upload.single('CoverImage'), async (req, res) => {
-  const { title, body } = req.body;
-  const blog = await Blog.create({
-    title,
-    body,
-    createdBy: req.user._id,
-    coverimage: `/uploads/${req.user._id}/${req.file.filename}`,
-  });
-  return res.redirect(`/blog/${blog._id}`);
+router.delete('/:id/comments/:commentId', async (req, res) => {
+  if (!objectId.test(req.params.commentId))
+    return res.status(404).json({ error: 'Comment not found.' });
+  const post = await Blog.findById(req.params.id);
+  if (!post) return res.status(404).json({ error: 'Story not found.' });
+  const filter = { _id: req.params.commentId, blogID: req.params.id };
+  if (String(post.createdBy) !== String(req.user._id)) filter.createdBy = req.user._id;
+  const removed = await Comment.findOneAndDelete(filter);
+  if (!removed) return res.status(404).json({ error: 'Comment not found.' });
+  res.json({ ok: true });
 });
-
-// Show a blog with comments
-router.get("/:id", async (req, res) => {
-  const blogId = req.params.id;
-
-  if (!mongoose.Types.ObjectId.isValid(blogId)) {
-    return res.status(404).send("Invalid blog ID");
-  }
-
-  const blog = await Blog.findById(blogId)
-    .populate("createdBy", "fullName email pfp");
-
-  if (!blog) {
-    return res.status(404).send("Blog not found");
-  }
-
-  const comments = await Comment.find({ blogID: blogId })
-    .populate("createdBy", "fullName email pfp")
-    .sort({ createdAt: -1 });
-
-  return res.render("blog", {
-    user: req.user,
-    blog,
-    comments,
-  });
-});
-
 module.exports = router;

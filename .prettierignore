@@ -1,0 +1,10 @@
+node_modules
+Frontend/node_modules
+Frontend/dist
+storage
+.venv
+package-lock.json
+Frontend/package-lock.json
+views
+images
+test-results

@@ -7,3 +7,15 @@ node_modules/
 # Build output (if any)
 dist/
 build/
+
+# Private knowledge, local runtimes, and test output
+storage/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env.*
+!.env.example
+test-results/
+playwright-report/
+*.log

@@ -1,62 +1,34 @@
-const { Schema, model } = require("mongoose");
-const { createHmac, randomBytes } = require("node:crypto");
-const { createToken } = require("../services/auth");
-
-const UserSchema = new Schema({
-  fullName: {
-    type: String,
-    required: true,
+const { Schema, model } = require('mongoose');
+const bcrypt = require('bcryptjs');
+const { createHmac, timingSafeEqual } = require('node:crypto');
+const schema = new Schema(
+  {
+    fullName: { type: String, required: true, trim: true, maxlength: 80 },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true, select: false },
+    salt: { type: String, select: false },
+    tokenVersion: { type: Number, default: 0 },
+    pfp: String,
+    role: { type: String, enum: ['User', 'Admin'], default: 'User' },
   },
-  email: { 
-    type: String, 
-    required: true,
-    unique: true,
-  },
-  salt: String,
-  password: {
-    type: String,
-    required: true,
-  },
-  pfp: {
-    type: String,
-    default: "/images/pfp.png",
-  },
-  role: {
-    type: String,
-    enum: ["User", "Admin"],
-    default: "User",
+  { timestamps: true },
+);
+schema.pre('save', async function () {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+    this.salt = undefined;
   }
-}, { timestamps: true });
-
-UserSchema.pre("save", function (next) {
-  if (!this.isModified("password")) return next();
-
-  const salt = randomBytes(16).toString("hex");
-  const hashedPass = createHmac("sha256", salt)
-    .update(this.password)
-    .digest("hex");
-
-  this.salt = salt;
-  this.password = hashedPass;
-  next();
 });
-
-UserSchema.statics.Matchpassword = async function(email, password) {
-  const user = await this.findOne({ email });
-  if (!user) throw new Error("User not found");
-
-  const hashedPass = createHmac("sha256", user.salt)
-    .update(password)
-    .digest("hex");
-  if (hashedPass !== user.password) throw new Error("Wrong password");
-
-  const token = createToken({
-    id: user._id,
-    email: user.email,
-    role: user.role
-  });
-  return token;
+schema.methods.checkPassword = async function (password) {
+  if (this.salt) {
+    // Migrate the original Blog-page hash only after successful sign-in.
+    const actual = Buffer.from(createHmac('sha256', this.salt).update(password).digest('hex'));
+    const expected = Buffer.from(this.password);
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return false;
+    this.password = password;
+    await this.save();
+    return true;
+  }
+  return bcrypt.compare(password, this.password);
 };
-
-const User = model("User", UserSchema);
-module.exports = User;
+module.exports = model('User', schema);

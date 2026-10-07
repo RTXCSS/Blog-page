@@ -1,0 +1,12 @@
+{
+  "scope": "Workspace concept and reusable navigation, prompt and source components",
+  "fileKey": "dvFzHwHz1lTRTIKzdxY6RH",
+  "url": "https://www.figma.com/design/dvFzHwHz1lTRTIKzdxY6RH?node-id=3-25",
+  "screenId": "3:25",
+  "components": ["3:16", "3:18", "3:21"],
+  "collectionId": "VariableCollectionId:3:2",
+  "fontFamilies": ["DM Sans", "Lora"],
+  "screenCounts": { "FRAME": 12, "TEXT": 54, "INSTANCE": 12 },
+  "validation": "Editable native layers; no raster UI. Font families verified. Canvas extended to show all three source rows; final composition visually reviewed.",
+  "canvaThemeBoard": "https://canva.link/iq92pwegjvu823c"
+}

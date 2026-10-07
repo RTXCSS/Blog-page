@@ -1,0 +1,12 @@
+node_modules
+Frontend/node_modules
+Frontend/dist
+.venv
+.git
+.env
+.env.*
+storage
+test-results
+playwright-report
+docs/*.png
+__pycache__

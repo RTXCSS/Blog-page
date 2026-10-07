@@ -1,0 +1,40 @@
+services:
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  rag:
+    build: ./rag_service
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      RAG_SERVICE_TOKEN: ${RAG_SERVICE_TOKEN}
+      CHROMA_PATH: /app/storage/chroma
+    volumes:
+      - chroma-data:/app/storage/chroma
+  web:
+    build: .
+    ports:
+      - '127.0.0.1:8000:8000'
+    environment:
+      NODE_ENV: development
+      MONGO_URL: mongodb://mongo:27017/second-brain
+      JWT_SECRET: ${JWT_SECRET}
+      RAG_SERVICE_TOKEN: ${RAG_SERVICE_TOKEN}
+      RAG_URL: http://rag:8001
+      CLIENT_ORIGIN: http://localhost:8000,http://127.0.0.1:8000
+    volumes:
+      - uploads:/app/storage/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rag:
+        condition: service_started
+volumes:
+  mongo-data:
+  chroma-data:
+  uploads:

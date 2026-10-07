@@ -1,22 +1,10 @@
-const { validatetoken } = require("../services/auth");
-
-function checkauthcookie(cookieName) {
-  return (req, res, next) => {
-    const token = req.cookies[cookieName];
-
-    if (!token) {
-      req.user = null;
-      return next();
-    }
-
-    try {
-      const payload = validatetoken(token);
-      req.user = payload;
-    } catch (error) {
-      req.user = null;
-    }
-    return next();
-  };
+const { authenticate } = require('../services/auth');
+async function requireAuth(req, res, next) {
+  try {
+    req.user = (await authenticate(req.cookies.token)).user;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Please sign in to continue.' });
+  }
 }
-
-module.exports = { checkauthcookie };
+module.exports = { requireAuth };
